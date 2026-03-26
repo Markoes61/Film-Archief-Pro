@@ -14,62 +14,140 @@
     <div id="root"></div>
 
     <script type="text/babel" data-type="module">
-        // Firebase Imports voor in de browser
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-        const { useState, useEffect, useMemo, useRef } = React;
-        const { 
-            Trash2, ChevronDown, Search, Download, RefreshCw, Plus, Star, Film, 
-            Clapperboard, Sparkles, Layers, Loader2, Globe, Copy, ChevronUp
-        } = lucide;
+        const { useState, useEffect, useMemo } = React;
+        const { Trash2, Search, Plus, Star, Film, Sparkles, Loader2, X } = lucide;
 
         // --- VUL HIER JE EIGEN FIREBASE CODES IN ---
         const firebaseConfig = {
             apiKey: "HIER_JE_API_KEY",
-            authDomain: "PROJECTNAAM.firebaseapp.com",
-            projectId: "PROJECTNAAM",
-            storageBucket: "PROJECTNAAM.appspot.com",
-            messagingSenderId: "ID_NUMMER",
-            appId: "APP_ID"
+            authDomain: "film-archief-pro.firebaseapp.com",
+            projectId: "film-archief-pro",
+            storageBucket: "film-archief-pro.appspot.com",
+            messagingSenderId: "HIER_JE_SENDER_ID",
+            appId: "HIER_JE_APP_ID"
         };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = 'mijn-archief-app';
         const TMDB_API_KEY = '841d890eb7ff314099af4ad3430bb7d7';
 
         function App() {
-            // Hier komt jouw volledige logica (ik heb het kort gehouden voor het overzicht, 
-            // maar je kunt je hele 'App' functie hier tussen plakken)
             const [user, setUser] = useState(null);
             const [isOnline, setIsOnline] = useState(false);
             const [archive, setArchive] = useState([]);
-            const [activeTab, setActiveTab] = useState('archief');
+            const [searchQuery, setSearchQuery] = useState('');
+            const [searchResults, setSearchResults] = useState([]);
+            const [loading, setLoading] = useState(false);
 
+            // Inloggen en Database koppelen
             useEffect(() => {
                 signInAnonymously(auth).catch(() => setIsOnline(false));
                 onAuthStateChanged(auth, (u) => {
                     setUser(u);
                     setIsOnline(!!u);
                 });
+
+                const q = query(collection(db, "films"), orderBy("addedAt", "desc"));
+                const unsubscribe = onSnapshot(q, (snapshot) => {
+                    const films = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setArchive(films);
+                });
+                return () => unsubscribe();
             }, []);
 
+            // Zoeken via TMDB
+            const handleSearch = async (e) => {
+                const query = e.target.value;
+                setSearchQuery(query);
+                if (query.length > 2) {
+                    setLoading(true);
+                    const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${query}&language=nl-NL`);
+                    const data = await res.json();
+                    setSearchResults(data.results || []);
+                    setLoading(false);
+                } else {
+                    setSearchResults([]);
+                }
+            };
+
+            const addMovie = async (movie) => {
+                await addDoc(collection(db, "films"), {
+                    title: movie.title,
+                    poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+                    rating: 7,
+                    addedAt: new Date().toISOString(),
+                    tmdbId: movie.id
+                });
+                setSearchQuery('');
+                setSearchResults([]);
+            };
+
+            const deleteMovie = async (id) => {
+                await deleteDoc(doc(db, "films", id));
+            };
+
             return (
-                <div className="min-h-screen text-white p-8">
-                    <header className="text-center mb-8">
-                        <h1 className="text-4xl font-black text-orange-500 uppercase tracking-tighter">Mijn Archief</h1>
-                        <p className="text-fuchsia-400 text-xl font-bold" style={{fontFamily: 'cursive'}}>Design By Mark Elings</p>
-                    </header>
-                    
-                    <div className="bg-gray-900 p-6 rounded-3xl border border-gray-800 shadow-2xl max-w-2xl mx-auto">
-                        <p className="text-center text-gray-400">Database is verbonden: {isOnline ? '✅ JA' : '❌ NEE'}</p>
-                        {/* Rest van jouw interface komt hier */}
-                        <div className="mt-8 p-4 bg-orange-600/10 border border-orange-500/20 rounded-xl text-center">
-                            Gefeliciteerd! Je app draait nu op GitHub.
+                <div className="max-w-4xl mx-auto p-4 sm:p-8 min-h-screen">
+                    <header className="text-center mb-12">
+                        <h1 className="text-5xl font-black text-orange-500 uppercase italic tracking-tighter mb-2">Mijn Archief</h1>
+                        <p className="text-fuchsia-400 text-2xl font-bold" style={{fontFamily: 'cursive'}}>Design By Mark Elings</p>
+                        <div className="mt-4 inline-flex items-center gap-2 px-4 py-1 rounded-full bg-gray-900 border border-gray-800 text-sm">
+                            <span className={isOnline ? "text-green-500" : "text-red-500"}>●</span>
+                            <span className="text-gray-400">{isOnline ? "Database Verbonden" : "Geen Verbinding"}</span>
                         </div>
+                    </header>
+
+                    {/* Zoekbalk */}
+                    <div className="relative mb-12">
+                        <div className="relative group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-orange-500 transition-colors" />
+                            <input 
+                                type="text"
+                                placeholder="Zoek een film om toe te voegen..."
+                                className="w-full bg-gray-900 border-2 border-gray-800 rounded-2xl py-4 pl-12 pr-4 text-xl focus:border-orange-500 focus:outline-none transition-all shadow-2xl"
+                                value={searchQuery}
+                                onChange={handleSearch}
+                            />
+                        </div>
+
+                        {searchResults.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden z-50 shadow-2xl">
+                                {searchResults.map(movie => (
+                                    <div key={movie.id} className="flex items-center justify-between p-3 hover:bg-gray-800 border-b border-gray-800 last:border-0 transition-colors">
+                                        <div className="flex items-center gap-4">
+                                            <img src={`https://image.tmdb.org/t/p/w92${movie.poster_path}`} className="w-12 h-18 rounded shadow" alt="" />
+                                            <span className="font-bold">{movie.title} ({movie.release_date?.split('-')[0]})</span>
+                                        </div>
+                                        <button onClick={() => addMovie(movie)} className="bg-orange-600 hover:bg-orange-500 p-2 rounded-full transition-transform active:scale-95">
+                                            <Plus size={24} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Film Lijst */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                        {archive.map(movie => (
+                            <div key={movie.id} className="group relative bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-orange-500/50 transition-all">
+                                <img src={movie.poster} className="w-full aspect-[2/3] object-cover" alt={movie.title} />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end">
+                                    <button onClick={() => deleteMovie(movie.id)} className="absolute top-2 right-2 bg-red-600/80 p-2 rounded-full hover:bg-red-600 transition-colors">
+                                        <Trash2 size={18} />
+                                    </button>
+                                    <h3 className="font-bold text-lg leading-tight mb-1">{movie.title}</h3>
+                                    <div className="flex items-center gap-1 text-orange-500 font-black">
+                                        <Star size={16} fill="currentColor" /> {movie.rating}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             );
