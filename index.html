@@ -47,6 +47,7 @@
         
         <!-- ARCHIEF TAB -->
         <div id="tab-content-archief" class="tab-pane space-y-8 animate-fadeIn">
+            <!-- Zoek en Acties -->
             <div class="bg-gray-900 p-5 rounded-3xl border border-gray-800 flex flex-col md:flex-row gap-4 items-center justify-between shadow-xl">
                 <div class="flex flex-wrap gap-2">
                     <button onclick="fetchMissingInfo()" id="btn-fetch" class="bg-green-600 hover:bg-green-500 text-white px-5 py-3 rounded-2xl font-bold flex items-center gap-3 transition-all">
@@ -65,6 +66,7 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Invoer Formulier -->
                 <div class="bg-gray-900 p-8 rounded-3xl border border-gray-800 shadow-2xl relative">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-black text-orange-400 flex items-center gap-3 uppercase tracking-wider"><i data-lucide="plus" class="text-orange-500"></i> Invoeren</h2>
@@ -98,6 +100,7 @@
                     </div>
                 </div>
 
+                <!-- Decoratie -->
                 <div class="hidden md:flex items-center justify-center p-8">
                     <div class="text-center opacity-20">
                         <i data-lucide="clapperboard" class="w-24 h-24 mx-auto mb-4"></i>
@@ -106,6 +109,7 @@
                 </div>
             </div>
 
+            <!-- Filters -->
             <div class="flex flex-wrap gap-3 justify-center">
                 <button onclick="filterType('alle')" class="filter-btn px-8 py-2.5 rounded-2xl font-black transition-all border-2 uppercase text-xs tracking-widest bg-orange-600 border-orange-600 text-white shadow-xl">Alles</button>
                 <button onclick="filterType('film')" class="filter-btn px-8 py-2.5 rounded-2xl font-black transition-all border-2 uppercase text-xs tracking-widest bg-gray-900 border-gray-800 text-gray-500 hover:text-orange-400">Films</button>
@@ -113,6 +117,7 @@
                 <button onclick="filterType('docu')" class="filter-btn px-8 py-2.5 rounded-2xl font-black transition-all border-2 uppercase text-xs tracking-widest bg-gray-900 border-gray-800 text-gray-500 hover:text-orange-400">Docus</button>
             </div>
 
+            <!-- Lijst -->
             <div class="bg-gray-900 rounded-[2.5rem] border border-gray-800 overflow-hidden shadow-2xl">
                 <div id="archiveList" class="divide-y divide-gray-800"></div>
             </div>
@@ -147,19 +152,19 @@
 
     </main>
 
+    <!-- Toast Meldingen -->
     <div id="toast" class="fixed top-6 right-6 z-50 pointer-events-none opacity-0 transition-all duration-300 transform translate-y-[-20px]">
         <div class="bg-orange-600 text-white px-6 py-3 rounded-2xl shadow-2xl font-bold border border-orange-400">
             <span id="toast-msg"></span>
         </div>
     </div>
 
-    <!-- Firebase Script -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js';
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js';
-        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
+        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
 
-        // FALLBACK CONFIG VOOR GITHUB
+        // JOUW FIREBASE CONFIG (Zorg dat deze exact klopt met je Firebase Console)
         const githubConfig = {
             apiKey: "AIzaSyBBxBNyQ7AB5YS_WPFBpizhZmHW9zcbXV8",
             authDomain: "film-archief-pro.firebaseapp.com",
@@ -169,13 +174,12 @@
             appId: "1:743968676004:web:940fa70df12ff54cd7ee31"
         };
 
-        // Gebruik omgevingsvariabelen indien beschikbaar, anders GitHub config
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : githubConfig;
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'mijn-archief-app';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'film-archief-pro';
         const TMDB_KEY = '841d890eb7ff314099af4ad3430bb7d7';
 
         let user = null;
@@ -187,15 +191,13 @@
         // AUTH INITIALISATIE
         const initAuth = async () => {
             try {
-                // Eerst proberen met de token van het platform
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
-                    // Fallback naar anoniem (werkt op GitHub)
                     await signInAnonymously(auth);
                 }
             } catch (error) {
-                console.error("Auth Error:", error);
+                console.error("Auth Fout:", error.message);
                 document.getElementById('status-text').innerText = 'Auth Error';
             }
         };
@@ -223,7 +225,12 @@
                 localArchive = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 localArchive.sort((a,b) => b.rating - a.rating || new Date(b.createdAt) - new Date(a.createdAt));
                 renderArchive();
-            }, (error) => console.error("Archive Error:", error));
+            }, (error) => {
+                console.error("Firestore Archief Fout:", error.message);
+                if(error.code === 'permission-denied') {
+                    showToast("Check je Firebase Rules!");
+                }
+            });
 
             // Watchlist Listener
             const watchRef = collection(db, 'artifacts', appId, 'users', user.uid, 'watchlist');
@@ -232,10 +239,10 @@
                 document.getElementById('watchlist-count').innerText = localWatchlist.length;
                 document.getElementById('watchlist-count').classList.toggle('hidden', localWatchlist.length === 0);
                 renderWatchlist();
-            }, (error) => console.error("Watchlist Error:", error));
+            }, (error) => console.error("Firestore Watchlist Fout:", error.message));
         }
 
-        // --- UI FUNCTIES ---
+        // --- UI & LOGICA ---
         window.switchTab = (tabId) => {
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
             document.getElementById(`tab-content-${tabId}`).classList.remove('hidden');
@@ -260,8 +267,13 @@
                 );
             }
 
+            if(filtered.length === 0) {
+                list.innerHTML = `<div class="p-20 text-center text-gray-600 italic">Geen resultaten gevonden...</div>`;
+                return;
+            }
+
             list.innerHTML = filtered.map(item => `
-                <div class="hover:bg-gray-800/30 transition-all group">
+                <div class="hover:bg-gray-800/30 transition-all group border-b border-gray-800 last:border-0">
                     <div class="p-5 flex items-center justify-between cursor-pointer" onclick="toggleExpand('${item.id}')">
                         <div class="flex items-center gap-5">
                             <div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-inner ${item.rating >= 8 ? 'bg-green-500/10 text-green-500' : 'bg-orange-500/10 text-orange-500'}">${item.rating}</div>
@@ -302,8 +314,12 @@
 
         window.renderWatchlist = () => {
             const list = document.getElementById('watchlistContent');
+            if(localWatchlist.length === 0) {
+                list.innerHTML = `<div class="p-20 text-center text-gray-600 italic">Je watchlist is momenteel leeg.</div>`;
+                return;
+            }
             list.innerHTML = localWatchlist.map(item => `
-                <div class="p-6 flex items-center justify-between group">
+                <div class="p-6 flex items-center justify-between group border-b border-gray-800 last:border-0">
                     <div class="flex items-center gap-6">
                         <div class="w-16 h-24 bg-gray-800 rounded-xl overflow-hidden flex-shrink-0 border border-gray-700">
                              ${item.poster ? `<img src="${item.poster}" class="w-full h-full object-cover">` : `<i data-lucide="film" class="m-auto mt-8 opacity-20"></i>`}
@@ -322,20 +338,22 @@
         };
 
         window.handleSingleAdd = async () => {
-            if (!user) return;
+            if (!user) return showToast("Geen verbinding...");
             const title = document.getElementById('singleTitle').value;
             const type = document.getElementById('singleType').value;
             const rating = parseFloat(document.getElementById('singleRating').value);
             if(!title) return;
 
-            const docRef = await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'archive'), {
-                title, type, rating, createdAt: new Date().toISOString(), infoFetched: false
-            });
-            document.getElementById('singleTitle').value = '';
-            showToast("Toegevoegd!");
-            
-            const info = await fetchTMDB(title, type);
-            if(info) await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'archive', docRef.id), info);
+            try {
+                const docRef = await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'archive'), {
+                    title, type, rating, createdAt: new Date().toISOString(), infoFetched: false
+                });
+                document.getElementById('singleTitle').value = '';
+                showToast("Toegevoegd!");
+                
+                const info = await fetchTMDB(title, type);
+                if(info) await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'archive', docRef.id), info);
+            } catch(e) { showToast("Toevoegen mislukt."); }
         };
 
         window.handleBulkAdd = async () => {
@@ -456,6 +474,11 @@
             lucide.createIcons();
 
             const favs = localArchive.filter(i => i.rating >= 7).map(i => i.title).slice(0, 20).join(', ');
+            if(!favs) {
+                container.innerHTML = `<p class="text-gray-500">Voeg eerst wat films toe aan je archief!</p>`;
+                return;
+            }
+
             const prompt = `Gezien deze lijst met favorieten: [${favs}], stel EEN nieuwe film of serie voor die hier perfect bij past. Geef antwoord in JSON: {"titel": "...", "waarom": "..."}`;
 
             try {
