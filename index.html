@@ -468,16 +468,16 @@
             renderArchive();
         };
 
-        window.generateTip = async () => {
-            const container = document.getElementById('tip-container');
-            container.innerHTML = `<div class="flex flex-col items-center gap-4 text-orange-500"><i data-lucide="refresh-cw" class="w-12 h-12 animate-spin"></i><p class="font-bold">AI Analyseert...</p></div>`;
-            lucide.createIcons();
+       window.generateTip = async () => {
 
-            const favs = localArchive.filter(i => i.rating >= 7).map(i => i.title).slice(0, 20).join(', ');
-            if(!favs) {
-                container.innerHTML = `<p class="text-gray-500">Voeg eerst wat films toe aan je archief!</p>`;
-                return;
-            }
+    const container = document.getElementById('tip-container');
+
+    container.innerHTML = `
+        <div class="flex flex-col items-center gap-4 text-orange-500">
+            <i data-lucide="refresh-cw" class="w-12 h-12 animate-spin"></i>
+            <p class="font-bold">Analyseert jouw smaak...</p>
+        </div>
+    `;
 
             const prompt = `Gezien deze lijst met favorieten: [${favs}], stel EEN nieuwe film of serie voor die hier perfect bij past. Geef antwoord in JSON: {"titel": "...", "waarom": "..."}`;
 
