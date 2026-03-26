@@ -1,18 +1,23 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mijn Film Archief - Design By Mark Elings</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
-</head>
-<body class="bg-gray-950">
-    <div id="root"></div>
+<script type="module">
+  // We gebruiken hier de volledige HTTPS links zodat GitHub de bestanden kan vinden
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+  import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+  import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+  // HIER GAAT JOUW CODE VERDER...
+  const firebaseConfig = {
+    apiKey: "AIzaSyBBxBNyQ7AB5YS_WPFBpizhZmHW9zcbXV8",
+    authDomain: "film-archief-pro.firebaseapp.com",
+    projectId: "film-archief-pro",
+    storageBucket: "film-archief-pro.firebasestorage.app",
+    messagingSenderId: "743968676004",
+    appId: "1:743968676004:web:940fa70df12ff54cd7ee31"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  // ... de rest van je functies
+</script>
 
     <script type="text/babel" data-type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
