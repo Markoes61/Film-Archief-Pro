@@ -73,19 +73,15 @@
             };
 
             const addMovie = async (movie) => {
-                try {
-                    await addDoc(collection(db, "films"), {
-                        title: movie.title,
-                        poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
-                        rating: 7,
-                        addedAt: new Date().toISOString(),
-                        tmdbId: movie.id
-                    });
-                    setSearchQuery('');
-                    setSearchResults([]);
-                } catch (e) {
-                    alert("Fout bij opslaan. Staat je database wel op 'Test Mode'?");
-                }
+                await addDoc(collection(db, "films"), {
+                    title: movie.title,
+                    poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+                    rating: 7,
+                    addedAt: new Date().toISOString(),
+                    tmdbId: movie.id
+                });
+                setSearchQuery('');
+                setSearchResults([]);
             };
 
             const deleteMovie = async (id) => {
