@@ -16,44 +16,7 @@
     </style>
 </head>
 <body class="pb-24">
-    <input id="search-input" type="text" placeholder="Zoek film of serie..." class="w-full p-4 rounded-xl bg-gray-900 text-white">
-const TMDB_KEY = "JOUW_TMDB_API_KEY";
 
-document.getElementById("search-input").addEventListener("input", async (e) => {
-
-    const query = e.target.value.trim();
-
-    if (query.length < 2) {
-        document.getElementById("search-results").innerHTML = "";
-        return;
-    }
-
-    const res = await fetch(
-        `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}`
-    );
-
-    const data = await res.json();
-
-    const results = data.results
-        .filter(r => r.media_type === "movie" || r.media_type === "tv")
-        .slice(0,5);
-
-    const container = document.getElementById("search-results");
-
-    container.innerHTML = results.map(r => `
-        <div onclick="selectTitle('${r.title || r.name}')" 
-        class="p-3 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer">
-
-            ${r.title || r.name}
-            <span class="text-gray-400 text-sm">
-            (${(r.release_date || r.first_air_date || "").slice(0,4)})
-            </span>
-
-        </div>
-    `).join("");
-
-});
-<div id="search-results" class="mt-4 space-y-2"></div>
     <!-- Header -->
     <header class="bg-gray-900 border-b-4 border-orange-500 shadow-2xl sticky top-0 z-40 backdrop-blur-md bg-opacity-95">
         <div class="max-w-5xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -505,106 +468,56 @@ document.getElementById("search-input").addEventListener("input", async (e) => {
             renderArchive();
         };
 
-window.generateTip = async () => {
+        window.generateTip = async () => {
+            const container = document.getElementById('tip-container');
+            container.innerHTML = `<div class="flex flex-col items-center gap-4 text-orange-500"><i data-lucide="refresh-cw" class="w-12 h-12 animate-spin"></i><p class="font-bold">AI Analyseert...</p></div>`;
+            lucide.createIcons();
 
-    const container = document.getElementById('tip-container');
+            const favs = localArchive.filter(i => i.rating >= 7).map(i => i.title).slice(0, 20).join(', ');
+            if(!favs) {
+                container.innerHTML = `<p class="text-gray-500">Voeg eerst wat films toe aan je archief!</p>`;
+                return;
+            }
 
-    container.innerHTML = `
-        <div class="flex flex-col items-center gap-4 text-orange-500">
-            <i data-lucide="refresh-cw" class="w-12 h-12 animate-spin"></i>
-            <p class="font-bold">Analyseert jouw smaak...</p>
-        </div>
-    `;
+            const prompt = `Gezien deze lijst met favorieten: [${favs}], stel EEN nieuwe film of serie voor die hier perfect bij past. Geef antwoord in JSON: {"titel": "...", "waarom": "..."}`;
 
-    lucide.createIcons();
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } })
+                });
+                const data = await res.json();
+                const ai = JSON.parse(data.candidates[0].content.parts[0].text);
+                const info = await fetchTMDB(ai.titel, 'film');
 
-    if(localArchive.length < 3){
-        container.innerHTML = `<p class="text-gray-500">Voeg eerst een paar films toe aan je archief.</p>`;
-        return;
-    }
-
-    try{
-
-        const favorites = localArchive
-            .filter(i => i.rating >= 7 && i.tmdbId)
-            .slice(0,10);
-
-        if(favorites.length === 0){
-            container.innerHTML = `<p class="text-gray-500">Nog geen sterke favorieten gevonden.</p>`;
-            return;
-        }
-
-        const base = favorites[Math.floor(Math.random()*favorites.length)];
-        const mediaType = base.mediaType || "movie";
-
-        const url = `https://api.themoviedb.org/3/${mediaType}/${base.tmdbId}/recommendations?api_key=${TMDB_KEY}&language=nl-NL`;
-
-        const res = await fetch(url);
-        const data = await res.json();
-
-        if(!data.results || data.results.length === 0){
-            container.innerHTML = `<p class="text-gray-500">Geen aanbevelingen gevonden.</p>`;
-            return;
-        }
-function selectTitle(title){
-    document.getElementById("search-input").value = title;
-    document.getElementById("search-results").innerHTML = "";
-}
-        const pick = data.results[Math.floor(Math.random()*data.results.length)];
-
-        const poster = pick.poster_path
-            ? `https://image.tmdb.org/t/p/w500${pick.poster_path}`
-            : "";
-
-        container.innerHTML = `
-            <div class="bg-gray-900 border border-gray-800 rounded-[3rem] p-8 md:p-12 shadow-2xl flex flex-col md:flex-row gap-10 animate-fadeIn w-full">
-
-                <div class="w-full md:w-64 aspect-[2/3] rounded-3xl overflow-hidden shadow-2xl border-2 border-orange-500/20 flex-shrink-0">
-                    ${poster ? `<img src="${poster}" class="w-full h-full object-cover">` : ""}
-                </div>
-
-                <div class="flex-1 space-y-6">
-
-                    <div class="space-y-2">
-                        <span class="text-orange-500 font-black uppercase tracking-[0.3em] text-xs">Aanbevolen voor jou</span>
-                        <h3 class="text-4xl font-black text-white leading-none">
-                            ${pick.title || pick.name}
-                        </h3>
-                    </div>
-
-                    <div class="bg-orange-500/5 border border-orange-500/10 p-6 rounded-3xl italic text-orange-200">
-                        Gebaseerd op jouw waardering voor <b>${base.fetchedTitle || base.title}</b>
-                    </div>
-
-                    <p class="text-gray-400 line-clamp-3">
-                        ${pick.overview || "Geen beschrijving beschikbaar."}
-                    </p>
-
-                    <div class="flex gap-4 pt-4">
-
-                        <button onclick='addToWatchlist(${JSON.stringify({
-                            title: pick.title || pick.name,
-                            poster: poster,
-                            mediaType: mediaType
-                        }).replace(/'/g,"&apos;")})'
-                        class="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg active:scale-95">
-                            Watchlist
-                        </button>
-
-                    </div>
-
-                </div>
-            </div>
-        `;
-
-    }catch(e){
-
-        container.innerHTML = `<p class="text-red-500">Kon geen kijkerstip ophalen.</p>`;
-
-    }
-
-    lucide.createIcons();
-};
+                if(info) {
+                    container.innerHTML = `
+                        <div class="bg-gray-900 border border-gray-800 rounded-[3rem] p-8 md:p-12 shadow-2xl flex flex-col md:flex-row gap-10 animate-fadeIn w-full">
+                            <div class="w-full md:w-64 aspect-[2/3] rounded-3xl overflow-hidden shadow-2xl border-2 border-orange-500/20 flex-shrink-0">
+                                <img src="${info.poster}" class="w-full h-full object-cover">
+                            </div>
+                            <div class="flex-1 space-y-6">
+                                <div class="space-y-2">
+                                    <span class="text-orange-500 font-black uppercase tracking-[0.3em] text-xs">Geselecteerd voor jou</span>
+                                    <h3 class="text-4xl font-black text-white leading-none">${info.fetchedTitle}</h3>
+                                </div>
+                                <div class="bg-orange-500/5 border border-orange-500/10 p-6 rounded-3xl italic text-orange-200">
+                                    "${ai.waarom}"
+                                </div>
+                                <p class="text-gray-400 line-clamp-3">${info.plot}</p>
+                                <div class="flex gap-4 pt-4">
+                                    <button onclick='addToWatchlist(${JSON.stringify(info).replace(/'/g, "&apos;")})' class="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg active:scale-95">Watchlist</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch(e) { 
+                container.innerHTML = `<p class="text-red-500">AI even offline. Probeer het opnieuw!</p>`;
+            }
+            lucide.createIcons();
+        };
 
         window.showToast = (msg) => {
             const t = document.getElementById('toast');
