@@ -2,65 +2,32 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mijn Archief - Design By Mark Elings</title>
+    <title>Mijn Archief - Mark Elings</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .dancing { font-family: 'Dancing Script', cursive; }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-950 text-gray-100 pb-24">
+<body class="bg-gray-950 text-white p-8">
 
-    <header class="bg-gray-900 border-b-4 border-orange-500 shadow-2xl sticky top-0 z-40 backdrop-blur-md bg-opacity-95">
-        <div class="max-w-5xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="text-center md:text-left">
-                <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600 tracking-tighter uppercase">Mijn Archief</h1>
-                <div class="flex items-center justify-center md:justify-start gap-2 mt-1">
-                    <p class="text-fuchsia-400 text-2xl font-bold dancing">Design By Mark Elings</p>
-                    <div id="status-dot" class="ml-3 flex items-center gap-1.5 bg-black/40 px-2 py-0.5 rounded-full border border-white/5">
-                        <div class="w-2.5 h-2.5 rounded-full bg-red-600" id="online-indicator"></div>
-                        <span class="text-[10px] font-black uppercase tracking-widest text-gray-400" id="status-text">Offline</span>
-                    </div>
-                </div>
-            </div>
-            <nav class="flex gap-2 bg-gray-950 p-1.5 rounded-2xl border border-gray-800">
-                <button class="px-5 py-2 rounded-xl bg-orange-600 text-white font-bold">Archief</button>
-                <button class="px-5 py-2 rounded-xl text-gray-500 font-bold hover:text-orange-400">Kijkerstip</button>
-                <button class="px-5 py-2 rounded-xl text-gray-500 font-bold hover:text-orange-400">Watchlist</button>
-            </nav>
-        </div>
-    </header>
-
-    <main class="max-w-5xl mx-auto px-6 py-8">
-        <div class="bg-gray-900 p-8 rounded-3xl border border-gray-800 shadow-2xl max-w-md mx-auto mb-10">
-            <h2 class="text-xl font-black text-orange-400 flex items-center gap-3 uppercase tracking-wider mb-6">
-                <i data-lucide="plus-circle" class="text-orange-500"></i> Invoeren
-            </h2>
-            <div class="space-y-4">
-                <input type="text" id="filmTitel" placeholder="Typ een titel..." class="w-full bg-gray-950 border border-gray-800 rounded-xl px-5 py-3 outline-none focus:border-orange-500">
-                <div class="flex gap-3">
-                    <select id="filmType" class="flex-1 bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 outline-none focus:border-orange-500 text-white">
-                        <option value="film">Film</option>
-                        <option value="serie">Serie</option>
-                        <option value="docu">Docu</option>
-                    </select>
-                    <input type="number" id="filmRating" value="7" step="0.5" class="w-16 bg-gray-950 border border-gray-800 rounded-xl px-2 py-3 text-center font-bold">
-                </div>
-                <button id="addBtn" class="w-full bg-orange-600 py-3 rounded-xl font-black hover:bg-orange-500 transition-all uppercase tracking-widest shadow-lg">Toevoegen</button>
-            </div>
+    <div class="max-w-2xl mx-auto text-center">
+        <h1 class="text-5xl font-black text-orange-500 uppercase italic tracking-tighter mb-2">Mijn Archief</h1>
+        <p class="text-fuchsia-400 text-2xl font-bold mb-10" style="font-family: 'Dancing Script', cursive;">Design By Mark Elings</p>
+        
+        <div id="db-indicator" class="mb-6 text-xs font-black uppercase tracking-widest text-red-500">
+            Status: Verbinding maken...
         </div>
 
-        <div id="filmLijst" class="grid gap-4">
+        <div class="bg-gray-900 p-6 rounded-3xl border border-gray-800 shadow-2xl mb-8">
+            <input type="text" id="filmInvoer" placeholder="Filmnaam..." class="w-full bg-black border border-gray-800 rounded-xl p-4 mb-4 text-white outline-none focus:border-orange-500">
+            <button id="voegToeBtn" class="w-full bg-orange-600 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-orange-500">Toevoegen</button>
+        </div>
+
+        <div id="filmLijst" class="grid gap-4 text-left">
             </div>
-    </main>
+    </div>
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, collection, onSnapshot, addDoc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyBBxBNyQ7AB5YS_WPFBpizhZmHW9zcbXV8",
@@ -72,70 +39,40 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = 'mijn-archief-app';
 
-        // Icons laden
-        lucide.createIcons();
+        // Check of we verbinding hebben
+        if(db) {
+            document.getElementById('db-indicator').innerText = "Status: Verbonden ✅";
+            document.getElementById('db-indicator').classList.replace('text-red-500', 'text-green-500');
+        }
 
-        // Authenticatie & Status
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                document.getElementById('online-indicator').className = 'w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)] animate-pulse';
-                document.getElementById('status-text').innerText = 'Online';
-                loadFilms(user.uid);
-            } else {
-                signInAnonymously(auth);
-            }
-        });
-
-        // Toevoegen Functie
-        window.voegFilmToe = async (uid) => {
-            const title = document.getElementById('filmTitel').value;
-            const type = document.getElementById('filmType').value;
-            const rating = document.getElementById('filmRating').value;
-            
-            if (!title) return;
-
-            try {
-                const archiveRef = collection(db, 'artifacts', appId, 'users', uid, 'archive');
-                await addDoc(archiveRef, {
-                    title: title,
-                    type: type,
-                    rating: parseFloat(rating),
-                    createdAt: new Date().toISOString()
-                });
-                document.getElementById('filmTitel').value = '';
-            } catch (e) {
-                alert("Fout bij opslaan: " + e.message);
-            }
+        // Functie voor toevoegen
+        document.getElementById('voegToeBtn').onclick = async () => {
+            const titel = document.getElementById('filmInvoer').value;
+            if(!titel) return;
+            await addDoc(collection(db, "films"), {
+                title: titel,
+                rating: 7,
+                createdAt: new Date().toISOString()
+            });
+            document.getElementById('filmInvoer').value = '';
         };
 
-        document.getElementById('addBtn').onclick = () => voegFilmToe(auth.currentUser.uid);
-
-        // Films Live laden
-        function loadFilms(uid) {
-            const q = query(collection(db, 'artifacts', appId, 'users', uid, 'archive'), orderBy('createdAt', 'desc'));
-            onSnapshot(q, (snapshot) => {
-                const lijstDiv = document.getElementById('filmLijst');
-                lijstDiv.innerHTML = '';
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    lijstDiv.innerHTML += `
-                        <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 flex items-center justify-between">
-                            <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center font-black">${data.rating}</div>
-                                <div>
-                                    <h3 class="font-bold text-lg">${data.title}</h3>
-                                    <span class="text-[10px] uppercase font-black text-gray-500 bg-black/40 px-2 py-0.5 rounded border border-white/5">${data.type}</span>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
+        // Live lijst ophalen
+        const q = query(collection(db, "films"), orderBy("createdAt", "desc"));
+        onSnapshot(q, (snapshot) => {
+            const lijst = document.getElementById('filmLijst');
+            lijst.innerHTML = '';
+            snapshot.forEach((doc) => {
+                const f = doc.data();
+                lijst.innerHTML += `
+                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800 flex justify-between items-center">
+                        <span class="font-bold">${f.title}</span>
+                        <span class="text-orange-500 font-black">7</span>
+                    </div>`;
             });
-        }
+        });
     </script>
 </body>
 </html>
