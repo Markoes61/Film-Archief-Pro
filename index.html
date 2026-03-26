@@ -18,17 +18,17 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-        const { useState, useEffect, useMemo } = React;
-        const { Trash2, Search, Plus, Star, Film, Sparkles, Loader2, X } = lucide;
+        const { useState, useEffect } = React;
+        const { Trash2, Search, Plus, Star } = lucide;
 
-        // --- VUL HIER JE EIGEN FIREBASE CODES IN ---
+        // Jouw unieke Firebase configuratie
         const firebaseConfig = {
-            apiKey: "HIER_JE_API_KEY",
-            authDomain: "film-archief-pro.firebaseapp.com",
-            projectId: "film-archief-pro",
-            storageBucket: "film-archief-pro.appspot.com",
-            messagingSenderId: "HIER_JE_SENDER_ID",
-            appId: "HIER_JE_APP_ID"
+          apiKey: "AIzaSyBBxBNyQ7AB5YS_WPFBpizhZmHW9zcbXV8",
+          authDomain: "film-archief-pro.firebaseapp.com",
+          projectId: "film-archief-pro",
+          storageBucket: "film-archief-pro.firebasestorage.app",
+          messagingSenderId: "743968676004",
+          appId: "1:743968676004:web:940fa70df12ff54cd7ee31"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -42,9 +42,7 @@
             const [archive, setArchive] = useState([]);
             const [searchQuery, setSearchQuery] = useState('');
             const [searchResults, setSearchResults] = useState([]);
-            const [loading, setLoading] = useState(false);
 
-            // Inloggen en Database koppelen
             useEffect(() => {
                 signInAnonymously(auth).catch(() => setIsOnline(false));
                 onAuthStateChanged(auth, (u) => {
@@ -56,20 +54,20 @@
                 const unsubscribe = onSnapshot(q, (snapshot) => {
                     const films = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     setArchive(films);
+                }, (error) => {
+                    console.error("Firestore error:", error);
+                    setIsOnline(false);
                 });
                 return () => unsubscribe();
             }, []);
 
-            // Zoeken via TMDB
             const handleSearch = async (e) => {
                 const query = e.target.value;
                 setSearchQuery(query);
                 if (query.length > 2) {
-                    setLoading(true);
                     const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${query}&language=nl-NL`);
                     const data = await res.json();
                     setSearchResults(data.results || []);
-                    setLoading(false);
                 } else {
                     setSearchResults([]);
                 }
@@ -98,33 +96,32 @@
                         <p className="text-fuchsia-400 text-2xl font-bold" style={{fontFamily: 'cursive'}}>Design By Mark Elings</p>
                         <div className="mt-4 inline-flex items-center gap-2 px-4 py-1 rounded-full bg-gray-900 border border-gray-800 text-sm">
                             <span className={isOnline ? "text-green-500" : "text-red-500"}>●</span>
-                            <span className="text-gray-400">{isOnline ? "Database Verbonden" : "Geen Verbinding"}</span>
+                            <span className="text-gray-400">{isOnline ? "Database Verbonden" : "Verbinding Verbroken"}</span>
                         </div>
                     </header>
 
-                    {/* Zoekbalk */}
                     <div className="relative mb-12">
-                        <div className="relative group">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-orange-500 transition-colors" />
+                        <div className="relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                             <input 
                                 type="text"
-                                placeholder="Zoek een film om toe te voegen..."
-                                className="w-full bg-gray-900 border-2 border-gray-800 rounded-2xl py-4 pl-12 pr-4 text-xl focus:border-orange-500 focus:outline-none transition-all shadow-2xl"
+                                placeholder="Zoek een film..."
+                                className="w-full bg-gray-900 border-2 border-gray-800 rounded-2xl py-4 pl-12 pr-4 text-xl text-white focus:border-orange-500 focus:outline-none transition-all"
                                 value={searchQuery}
                                 onChange={handleSearch}
                             />
                         </div>
 
                         {searchResults.length > 0 && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden z-50 shadow-2xl">
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden z-50">
                                 {searchResults.map(movie => (
-                                    <div key={movie.id} className="flex items-center justify-between p-3 hover:bg-gray-800 border-b border-gray-800 last:border-0 transition-colors">
+                                    <div key={movie.id} className="flex items-center justify-between p-3 hover:bg-gray-800 border-b border-gray-800 last:border-0">
                                         <div className="flex items-center gap-4">
-                                            <img src={`https://image.tmdb.org/t/p/w92${movie.poster_path}`} className="w-12 h-18 rounded shadow" alt="" />
-                                            <span className="font-bold">{movie.title} ({movie.release_date?.split('-')[0]})</span>
+                                            <img src={`https://image.tmdb.org/t/p/w92${movie.poster_path}`} className="w-10 h-14 rounded shadow" alt="" />
+                                            <span className="text-white font-bold">{movie.title}</span>
                                         </div>
-                                        <button onClick={() => addMovie(movie)} className="bg-orange-600 hover:bg-orange-500 p-2 rounded-full transition-transform active:scale-95">
-                                            <Plus size={24} />
+                                        <button onClick={() => addMovie(movie)} className="bg-orange-600 p-2 rounded-full text-white">
+                                            <Plus size={20} />
                                         </button>
                                     </div>
                                 ))}
@@ -132,18 +129,17 @@
                         )}
                     </div>
 
-                    {/* Film Lijst */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                         {archive.map(movie => (
-                            <div key={movie.id} className="group relative bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-orange-500/50 transition-all">
+                            <div key={movie.id} className="group relative bg-gray-900 rounded-2xl overflow-hidden border border-gray-800">
                                 <img src={movie.poster} className="w-full aspect-[2/3] object-cover" alt={movie.title} />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end">
-                                    <button onClick={() => deleteMovie(movie.id)} className="absolute top-2 right-2 bg-red-600/80 p-2 rounded-full hover:bg-red-600 transition-colors">
-                                        <Trash2 size={18} />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black p-4 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => deleteMovie(movie.id)} className="absolute top-2 right-2 bg-red-600 p-2 rounded-full text-white">
+                                        <Trash2 size={16} />
                                     </button>
-                                    <h3 className="font-bold text-lg leading-tight mb-1">{movie.title}</h3>
-                                    <div className="flex items-center gap-1 text-orange-500 font-black">
-                                        <Star size={16} fill="currentColor" /> {movie.rating}
+                                    <h3 className="text-white font-bold">{movie.title}</h3>
+                                    <div className="flex items-center gap-1 text-orange-500">
+                                        <Star size={14} fill="currentColor" /> {movie.rating}
                                     </div>
                                 </div>
                             </div>
