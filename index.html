@@ -450,9 +450,13 @@
             const title = titleInput.value;
             if(!title) return;
             const info = selectedTMDBData || await fetchTMDB(title, document.getElementById('singleType').value);
-            await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'archive'), {
-                title, type: document.getElementById('singleType').value, rating: parseFloat(document.getElementById('singleRating').value), createdAt: new Date().toISOString(), ...info
-            });
+            await addDoc(collection(db, 'archive'), {
+    title, 
+    type: document.getElementById('singleType').value, 
+    rating: parseFloat(document.getElementById('singleRating').value), 
+    createdAt: new Date().toISOString(), 
+    ...info
+});
             titleInput.value = '';
             selectedTMDBData = null;
             showToast("Toegevoegd aan archief!");
