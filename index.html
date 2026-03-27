@@ -248,30 +248,32 @@
         const safeAtob = (str) => decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
 
         function setupListeners() {
-            if (!user) return;
-            const archivePath = collection(db, 'artifacts', appId, 'users', user.uid, 'archive');
-            const watchlistPath = collection(db, 'artifacts', appId, 'users', user.uid, 'watchlist');
-            const trashPath = collection(db, 'artifacts', appId, 'users', user.uid, 'trash');
-            
-            onSnapshot(archivePath, s => {
-                localArchive = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                localArchive.sort((a,b) => b.rating - a.rating || new Date(b.createdAt) - new Date(a.createdAt));
-                updateBadge('archive-count', localArchive.length);
-                renderArchive();
-            }, (err) => console.error("Archive Listener Error:", err));
+    // We halen de 'if (!user) return;' weg, zodat iedereen mag kijken!
 
-            onSnapshot(watchlistPath, s => {
-                localWatchlist = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                updateBadge('watchlist-count', localWatchlist.length);
-                renderWatchlist();
-            }, (err) => console.error("Watchlist Listener Error:", err));
+    // We kijken nu direct in de centrale map 'archive'
+    const archivePath = collection(db, 'archive');
+    const watchlistPath = collection(db, 'watchlist');
+    const trashPath = collection(db, 'trash');
+    
+    onSnapshot(archivePath, s => {
+        localArchive = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        localArchive.sort((a,b) => b.rating - a.rating || new Date(b.createdAt) - new Date(a.createdAt));
+        updateBadge('archive-count', localArchive.length);
+        renderArchive();
+    }, (err) => console.error("Archive Listener Error:", err));
 
-            onSnapshot(trashPath, s => {
-                localTrash = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                updateBadge('trash-count', localTrash.length);
-                renderTrash();
-            }, (err) => console.error("Trash Listener Error:", err));
-        }
+    onSnapshot(watchlistPath, s => {
+        localWatchlist = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        updateBadge('watchlist-count', localWatchlist.length);
+        renderWatchlist();
+    }, (err) => console.error("Watchlist Listener Error:", err));
+
+    onSnapshot(trashPath, s => {
+        localTrash = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        updateBadge('trash-count', localTrash.length);
+        renderTrash();
+    }, (err) => console.error("Trash Listener Error:", err));
+}
 
         function updateBadge(id, count) {
             const badge = document.getElementById(id);
