@@ -13,11 +13,55 @@
         body { background-color: #030712; color: #f3f4f6; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .suggestion-item:hover { background-color: rgba(249, 115, 22, 0.1); }
+        .tab-btn.active { background-color: #ea580c; color: white; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        
+        .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #f97316;
+            color: white;
+            font-size: 10px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            border: 2px solid #111827;
+            font-weight: 800;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        
+        #trash-count:not(.hidden) {
+            background-color: #ef4444;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid #374151;
+            z-index: 100;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: none;
+            font-weight: bold;
+            font-size: 0.875rem;
+        }
     </style>
 </head>
 <body class="pb-24">
 
-    <!-- Header -->
+    <div id="toast"></div>
+
     <header class="bg-gray-900 border-b-4 border-orange-500 shadow-2xl sticky top-0 z-40 backdrop-blur-md bg-opacity-95">
         <div class="max-w-5xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="text-center md:text-left flex items-center gap-4">
@@ -33,11 +77,17 @@
                     </div>
                 </div>
             </div>
-            <nav class="flex gap-2 bg-gray-950 p-1.5 rounded-2xl border border-gray-800">
-                <button onclick="switchTab('archief')" id="btn-archief" class="tab-btn px-5 py-2 rounded-xl capitalize font-bold transition-all relative bg-orange-600 text-white shadow-lg">Archief</button>
-                <button onclick="switchTab('kijkerstip')" id="btn-kijkerstip" class="tab-btn px-5 py-2 rounded-xl capitalize font-bold transition-all relative text-gray-500 hover:text-orange-400">Kijkerstip</button>
-                <button onclick="switchTab('watchlist')" id="btn-watchlist" class="tab-btn px-5 py-2 rounded-xl capitalize font-bold transition-all relative text-gray-500 hover:text-orange-400">
-                    Watchlist <span id="watchlist-count" class="hidden absolute -top-2 -right-2 bg-orange-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-gray-950">0</span>
+            <nav class="flex flex-wrap justify-center gap-2 bg-gray-950 p-1.5 rounded-2xl border border-gray-800">
+                <button onclick="switchTab('archief')" id="btn-archief" class="tab-btn active px-4 py-2 rounded-xl text-xs sm:text-sm capitalize font-bold transition-all relative">
+                    Archief <span id="archive-count" class="hidden badge">0</span>
+                </button>
+                <button onclick="switchTab('kijkerstip')" id="btn-kijkerstip" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm capitalize font-bold transition-all relative text-gray-500 hover:text-orange-400">Kijkerstip</button>
+                <button onclick="switchTab('watchlist')" id="btn-watchlist" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm capitalize font-bold transition-all relative text-gray-500 hover:text-orange-400">
+                    Watchlist <span id="watchlist-count" class="hidden badge">0</span>
+                </button>
+                <button onclick="switchTab('trash')" id="btn-trash" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm capitalize font-bold transition-all relative text-gray-500 hover:text-red-400">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    <span id="trash-count" class="hidden badge">0</span>
                 </button>
             </nav>
         </div>
@@ -45,15 +95,9 @@
 
     <main class="max-w-5xl mx-auto px-6 py-8">
         
-        <!-- ARCHIEF TAB -->
         <div id="tab-content-archief" class="tab-pane space-y-8 animate-fadeIn">
-            <!-- Zoek en Acties -->
             <div class="bg-gray-900 p-5 rounded-3xl border border-gray-800 flex flex-col md:flex-row gap-4 items-center justify-between shadow-xl">
                 <div class="flex flex-wrap gap-2">
-                    <button onclick="fetchMissingInfo()" id="btn-fetch" class="bg-green-600 hover:bg-green-500 text-white px-5 py-3 rounded-2xl font-bold flex items-center gap-3 transition-all">
-                        <i data-lucide="download" class="w-5 h-5"></i>
-                        <span id="fetch-text">Titel Info</span>
-                    </button>
                     <button onclick="copyBackup()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-3 rounded-2xl font-bold flex items-center gap-3 transition-all shadow-lg active:scale-95">
                         <i data-lucide="copy" class="w-5 h-5"></i>
                         <span>Backup Lijst</span>
@@ -61,12 +105,11 @@
                 </div>
                 <div class="relative w-full md:w-80">
                     <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5"></i>
-                    <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Zoek op titel of acteur..." class="w-full bg-gray-950 border border-gray-800 rounded-2xl pl-12 pr-5 py-3 focus:border-orange-500 outline-none transition-all">
+                    <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Zoek op titel, acteur of producer..." class="w-full bg-gray-950 border border-gray-800 rounded-2xl pl-12 pr-5 py-3 focus:border-orange-500 outline-none transition-all">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Invoer Formulier -->
                 <div class="bg-gray-900 p-8 rounded-3xl border border-gray-800 shadow-2xl relative">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-black text-orange-400 flex items-center gap-3 uppercase tracking-wider"><i data-lucide="plus" class="text-orange-500"></i> Invoeren</h2>
@@ -77,12 +120,13 @@
 
                     <div class="space-y-4">
                         <div id="bulkSection" class="hidden animate-fadeIn space-y-3 p-4 bg-gray-950 rounded-2xl border border-orange-500/20 mb-4">
-                            <textarea id="bulkInput" placeholder="Titel - 8.5&#10;Andere Film - 9" class="w-full h-32 bg-gray-900 border border-gray-800 rounded-xl p-3 outline-none focus:border-orange-500 resize-none font-mono text-xs text-gray-300"></textarea>
+                            <textarea id="bulkInput" placeholder="Titel - 7&#10;Andere Film - 7" class="w-full h-32 bg-gray-900 border border-gray-800 rounded-xl p-3 outline-none focus:border-orange-500 resize-none font-mono text-xs text-gray-300"></textarea>
                             <button onclick="handleBulkAdd()" id="btn-bulk-import" class="w-full py-2.5 rounded-xl font-black bg-green-600 hover:bg-green-500 text-white transition-all uppercase tracking-widest text-xs">Importeer Lijst</button>
                         </div>
 
                         <div class="relative">
-                            <input type="text" id="singleTitle" placeholder="Typ een titel..." class="w-full bg-gray-950 border border-gray-800 rounded-xl px-5 py-3 outline-none focus:border-orange-500">
+                            <input type="text" id="singleTitle" oninput="liveSearchTMDB(this.value)" placeholder="Zoek titel om toe te voegen..." class="w-full bg-gray-950 border border-gray-800 rounded-xl px-5 py-3 outline-none focus:border-orange-500 transition-all">
+                            <div id="liveSuggestions" class="absolute left-0 right-0 top-full mt-2 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl z-50 overflow-hidden hidden max-h-64 overflow-y-auto hide-scrollbar"></div>
                         </div>
 
                         <div class="flex gap-3">
@@ -96,11 +140,10 @@
                                 <input type="number" id="singleRating" step="0.5" min="1" max="10" value="7" class="w-12 bg-transparent text-center font-bold outline-none">
                             </div>
                         </div>
-                        <button onclick="handleSingleAdd()" class="w-full bg-orange-600 py-3 rounded-xl font-black hover:bg-orange-500 transition-all uppercase tracking-widest shadow-lg active:scale-95">Toevoegen</button>
+                        <button onclick="handleSingleAdd()" id="btn-add-main" class="w-full bg-orange-600 py-3 rounded-xl font-black hover:bg-orange-500 transition-all uppercase tracking-widest shadow-lg active:scale-95">Archiveren</button>
                     </div>
                 </div>
 
-                <!-- Decoratie -->
                 <div class="hidden md:flex items-center justify-center p-8">
                     <div class="text-center opacity-20">
                         <i data-lucide="clapperboard" class="w-24 h-24 mx-auto mb-4"></i>
@@ -109,7 +152,6 @@
                 </div>
             </div>
 
-            <!-- Filters -->
             <div class="flex flex-wrap gap-3 justify-center">
                 <button onclick="filterType('alle')" class="filter-btn px-8 py-2.5 rounded-2xl font-black transition-all border-2 uppercase text-xs tracking-widest bg-orange-600 border-orange-600 text-white shadow-xl">Alles</button>
                 <button onclick="filterType('film')" class="filter-btn px-8 py-2.5 rounded-2xl font-black transition-all border-2 uppercase text-xs tracking-widest bg-gray-900 border-gray-800 text-gray-500 hover:text-orange-400">Films</button>
@@ -117,24 +159,17 @@
                 <button onclick="filterType('docu')" class="filter-btn px-8 py-2.5 rounded-2xl font-black transition-all border-2 uppercase text-xs tracking-widest bg-gray-900 border-gray-800 text-gray-500 hover:text-orange-400">Docus</button>
             </div>
 
-            <!-- Lijst -->
             <div class="bg-gray-900 rounded-[2.5rem] border border-gray-800 overflow-hidden shadow-2xl">
                 <div id="archiveList" class="divide-y divide-gray-800"></div>
             </div>
         </div>
 
-        <!-- KIJKERSTIP TAB -->
         <div id="tab-content-kijkerstip" class="tab-pane hidden max-w-4xl mx-auto space-y-8 animate-fadeIn">
             <div class="text-center space-y-4">
-                <h2 class="text-5xl font-black text-white uppercase tracking-tighter">AI Kijkerstip</h2>
-                <p class="text-gray-400 font-medium">Gebaseerd op jouw smaak uit het archief</p>
+                <h2 class="text-5xl font-black text-white uppercase tracking-tighter">Kijkerstip</h2>
+                <p class="text-gray-400 font-medium italic">Suggesties op basis van jouw top-titels (6.5 - 10)</p>
             </div>
-            <div id="tip-container" class="min-h-[400px] flex items-center justify-center">
-                <div class="text-gray-600 flex flex-col items-center gap-4">
-                   <i data-lucide="sparkles" class="w-12 h-12 animate-pulse"></i>
-                   <p>AI berekent jouw volgende favoriet...</p>
-                </div>
-            </div>
+            <div id="tip-container" class="min-h-[400px] flex items-center justify-center"></div>
             <div class="flex justify-center">
                 <button onclick="generateTip()" class="bg-gray-900 hover:bg-gray-800 text-orange-500 border border-orange-500/30 px-8 py-4 rounded-2xl font-black uppercase tracking-widest flex items-center gap-3 transition-all shadow-xl">
                     <i data-lucide="refresh-cw" class="w-5 h-5"></i> Nieuwe Suggestie
@@ -142,7 +177,6 @@
             </div>
         </div>
 
-        <!-- WATCHLIST TAB -->
         <div id="tab-content-watchlist" class="tab-pane hidden space-y-8 animate-fadeIn">
             <h2 class="text-3xl font-black text-white uppercase tracking-tighter text-center">Nog te kijken</h2>
             <div class="bg-gray-900 rounded-[2.5rem] border border-gray-800 overflow-hidden shadow-2xl">
@@ -150,21 +184,23 @@
             </div>
         </div>
 
+        <div id="tab-content-trash" class="tab-pane hidden space-y-8 animate-fadeIn">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <h2 class="text-3xl font-black text-white uppercase tracking-tighter">Prullenbak</h2>
+                <button onclick="emptyTrash()" class="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/20 px-6 py-2 rounded-xl font-bold transition-all text-xs uppercase tracking-widest">Leeg Prullenbak</button>
+            </div>
+            <div class="bg-gray-900 rounded-[2.5rem] border border-gray-800 overflow-hidden shadow-2xl">
+                <div id="trashContent" class="divide-y divide-gray-800"></div>
+            </div>
+        </div>
     </main>
 
-    <!-- Toast Meldingen -->
-    <div id="toast" class="fixed top-6 right-6 z-50 pointer-events-none opacity-0 transition-all duration-300 transform translate-y-[-20px]">
-        <div class="bg-orange-600 text-white px-6 py-3 rounded-2xl shadow-2xl font-bold border border-orange-400">
-            <span id="toast-msg"></span>
-        </div>
-    </div>
-
     <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js';
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js';
-        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        // JOUW FIREBASE CONFIG (Zorg dat deze exact klopt met je Firebase Console)
+        const TMDB_KEY = '841d890eb7ff314099af4ad3430bb7d7';
         const githubConfig = {
             apiKey: "AIzaSyBBxBNyQ7AB5YS_WPFBpizhZmHW9zcbXV8",
             authDomain: "film-archief-pro.firebaseapp.com",
@@ -178,27 +214,22 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'film-archief-pro';
-        const TMDB_KEY = '841d890eb7ff314099af4ad3430bb7d7';
 
         let user = null;
         let localArchive = [];
         let localWatchlist = [];
+        let localTrash = [];
         let activeFilter = 'alle';
         let expandedId = null;
+        let searchTimeout = null;
+        let selectedTMDBData = null;
 
-        // AUTH INITIALISATIE
         const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Auth Fout:", error.message);
-                document.getElementById('status-text').innerText = 'Auth Error';
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
             }
         };
 
@@ -208,326 +239,362 @@
                 document.getElementById('status-dot').className = 'w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)] animate-pulse';
                 document.getElementById('status-text').innerText = 'Online';
                 setupListeners();
-            } else {
-                document.getElementById('status-dot').className = 'w-2.5 h-2.5 rounded-full bg-red-600';
-                document.getElementById('status-text').innerText = 'Offline';
             }
         });
 
         initAuth();
 
-        function setupListeners() {
-            if (!user) return;
-            
-            // Archief Listener
-            const archRef = collection(db, 'artifacts', appId, 'users', user.uid, 'archive');
-            onSnapshot(archRef, snapshot => {
-                localArchive = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                localArchive.sort((a,b) => b.rating - a.rating || new Date(b.createdAt) - new Date(a.createdAt));
-                renderArchive();
-            }, (error) => {
-                console.error("Firestore Archief Fout:", error.message);
-                if(error.code === 'permission-denied') {
-                    showToast("Check je Firebase Rules!");
-                }
-            });
+        const safeBtoa = (str) => btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
+        const safeAtob = (str) => decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
 
-            // Watchlist Listener
-            const watchRef = collection(db, 'artifacts', appId, 'users', user.uid, 'watchlist');
-            onSnapshot(watchRef, snapshot => {
-                localWatchlist = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                document.getElementById('watchlist-count').innerText = localWatchlist.length;
-                document.getElementById('watchlist-count').classList.toggle('hidden', localWatchlist.length === 0);
-                renderWatchlist();
-            }, (error) => console.error("Firestore Watchlist Fout:", error.message));
+        function setupListeners() {
+    // We halen de 'if (!user) return;' weg, zodat iedereen mag kijken!
+
+    // We kijken nu direct in de centrale map 'archive'
+    const archivePath = collection(db, 'archive');
+    const watchlistPath = collection(db, 'watchlist');
+    const trashPath = collection(db, 'trash');
+    
+    onSnapshot(archivePath, s => {
+        localArchive = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        localArchive.sort((a,b) => b.rating - a.rating || new Date(b.createdAt) - new Date(a.createdAt));
+        updateBadge('archive-count', localArchive.length);
+        renderArchive();
+    }, (err) => console.error("Archive Listener Error:", err));
+
+    onSnapshot(watchlistPath, s => {
+        localWatchlist = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        updateBadge('watchlist-count', localWatchlist.length);
+        renderWatchlist();
+    }, (err) => console.error("Watchlist Listener Error:", err));
+
+    onSnapshot(trashPath, s => {
+        localTrash = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        updateBadge('trash-count', localTrash.length);
+        renderTrash();
+    }, (err) => console.error("Trash Listener Error:", err));
+}
+
+        function updateBadge(id, count) {
+            const badge = document.getElementById(id);
+            if(badge) {
+                badge.innerText = count;
+                badge.classList.toggle('hidden', count === 0);
+            }
         }
 
-        // --- UI & LOGICA ---
+        window.showToast = (msg) => {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 2500);
+        };
+
         window.switchTab = (tabId) => {
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
             document.getElementById(`tab-content-${tabId}`).classList.remove('hidden');
-            document.querySelectorAll('.tab-btn').forEach(b => {
-                b.className = "tab-btn px-5 py-2 rounded-xl capitalize font-bold transition-all relative text-gray-500 hover:text-orange-400";
-            });
-            document.getElementById(`btn-${tabId}`).className = "tab-btn px-5 py-2 rounded-xl capitalize font-bold transition-all relative bg-orange-600 text-white shadow-lg";
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active', 'bg-orange-600', 'text-white'));
+            const btn = document.getElementById(`btn-${tabId}`);
+            if(btn) btn.classList.add('active');
             if(tabId === 'kijkerstip') generateTip();
         };
 
+        window.liveSearchTMDB = (query) => {
+            const container = document.getElementById('liveSuggestions');
+            if (query.length < 2) { container.classList.add('hidden'); return; }
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(async () => {
+                const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&language=nl-NL`);
+                const data = await res.json();
+                if (data.results?.length) {
+                    container.innerHTML = data.results.slice(0, 6).map(item => `
+                        <div onclick="selectSuggestion('${encodeURIComponent(JSON.stringify(item))}')" class="suggestion-item p-3 flex items-center gap-4 cursor-pointer border-b border-gray-800 last:border-0">
+                            <img src="${item.poster_path ? `https://image.tmdb.org/t/p/w92${item.poster_path}` : ''}" class="w-10 h-14 bg-gray-800 rounded object-cover">
+                            <div><div class="font-bold text-sm text-white">${item.title || item.name}</div><div class="text-[10px] text-orange-500 uppercase font-black">${(item.release_date || item.first_air_date || '').split('-')[0]}</div></div>
+                        </div>`).join('');
+                    container.classList.remove('hidden');
+                }
+            }, 300);
+        };
+
+        window.selectSuggestion = async (encoded) => {
+            const item = JSON.parse(decodeURIComponent(encoded));
+            document.getElementById('singleTitle').value = item.title || item.name;
+            document.getElementById('singleType').value = item.media_type === 'tv' ? 'serie' : 'film';
+            selectedTMDBData = await fetchTMDB(item.title || item.name, item.media_type === 'tv' ? 'serie' : 'film');
+            document.getElementById('liveSuggestions').classList.add('hidden');
+        };
+
+        async function fetchTMDB(title, type) {
+            const sRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}&language=nl-NL`);
+            const sData = await sRes.json();
+            const best = sData.results?.find(r => r.media_type !== 'person') || sData.results?.[0];
+            if(!best) return {};
+            const dRes = await fetch(`https://api.themoviedb.org/3/${best.media_type === 'tv' ? 'tv' : 'movie'}/${best.id}?api_key=${TMDB_KEY}&language=nl-NL&append_to_response=credits`);
+            const d = await dRes.json();
+            const producer = d.credits?.crew?.find(c => c.job === 'Producer' || c.job === 'Director')?.name || 'Onbekend';
+            const actors = d.credits?.cast?.slice(0, 3).map(c => c.name).join(', ') || 'Onbekend';
+            return {
+                tmdbId: d.id, 
+                mediaType: best.media_type, 
+                plot: d.overview,
+                actors: actors,
+                producer: producer,
+                poster: d.poster_path ? `https://image.tmdb.org/t/p/w500${d.poster_path}` : null,
+                releaseYear: (d.release_date || d.first_air_date || '').split('-')[0],
+                genres: d.genres?.map(g => g.name).join(', '),
+                fetchedTitle: d.title || d.name, 
+                tmdbRating: d.vote_average?.toFixed(1)
+            };
+        }
+
         window.renderArchive = () => {
             const list = document.getElementById('archiveList');
-            let filtered = localArchive;
-            if(activeFilter !== 'alle') filtered = filtered.filter(i => i.type === activeFilter);
-            
+            if(!list) return;
+            let filtered = localArchive.filter(i => (activeFilter === 'alle' || i.type === activeFilter));
             const search = document.getElementById('searchInput').value.toLowerCase();
             if(search.length >= 2) {
                 filtered = filtered.filter(i => 
                     (i.title || "").toLowerCase().includes(search) || 
                     (i.fetchedTitle || "").toLowerCase().includes(search) ||
-                    (i.actors || "").toLowerCase().includes(search)
+                    (i.actors || "").toLowerCase().includes(search) ||
+                    (i.producer || "").toLowerCase().includes(search)
                 );
             }
-
-            if(filtered.length === 0) {
-                list.innerHTML = `<div class="p-20 text-center text-gray-600 italic">Geen resultaten gevonden...</div>`;
-                return;
-            }
-
             list.innerHTML = filtered.map(item => `
-                <div class="hover:bg-gray-800/30 transition-all group border-b border-gray-800 last:border-0">
+                <div class="hover:bg-gray-800/30 border-b border-gray-800">
                     <div class="p-5 flex items-center justify-between cursor-pointer" onclick="toggleExpand('${item.id}')">
                         <div class="flex items-center gap-5">
-                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-inner ${item.rating >= 8 ? 'bg-green-500/10 text-green-500' : 'bg-orange-500/10 text-orange-500'}">${item.rating}</div>
-                            <div>
-                                <h3 class="font-black text-xl text-white group-hover:text-orange-400 transition-colors">${item.fetchedTitle || item.title}</h3>
-                                <div class="flex items-center gap-3 mt-1 text-[10px] font-black uppercase tracking-tighter text-gray-500">
-                                    <span class="bg-gray-950 px-2 py-0.5 rounded border border-gray-800 text-orange-500">${item.type}</span>
-                                    ${item.releaseYear ? `<span>📅 ${item.releaseYear}</span>` : ''}
-                                    ${item.tmdbRating ? `<span class="text-amber-500 flex items-center gap-0.5"><i data-lucide="globe" class="w-2.5 h-2.5"></i> TMDB: ${item.tmdbRating}</span>` : ''}
-                                </div>
+                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl bg-orange-500/10 text-orange-500">${item.rating}</div>
+                            <div class="flex-grow">
+                                <h3 class="font-black text-xl text-white">${item.fetchedTitle || item.title}</h3>
+                                <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">
+                                    ${item.releaseYear || ''} • ${item.type} 
+                                    ${item.tmdbRating ? `<span class="ml-2 text-yellow-500 font-black">★ ${item.tmdbRating}</span>` : ''}
+                                </p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-4">
-                            <button onclick="event.stopPropagation(); deleteItem('${item.id}')" class="text-gray-600 hover:text-red-500 p-2 transition-colors"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
-                            <i data-lucide="chevron-down" class="w-6 h-6 transition-transform ${expandedId === item.id ? 'rotate-180 text-orange-500' : 'text-gray-600'}"></i>
-                        </div>
+                        <button onclick="event.stopPropagation(); moveToTrash('${item.id}')" class="text-gray-600 hover:text-red-500 p-3 transition-colors shrink-0"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
                     </div>
                     ${expandedId === item.id ? `
-                        <div class="px-6 pb-8 pt-2 bg-gray-950/50 animate-fadeIn flex flex-col md:flex-row gap-8">
-                            <div class="w-full md:w-48 aspect-[2/3] bg-gray-900 rounded-3xl overflow-hidden border-2 border-gray-800 flex-shrink-0 shadow-lg">
-                                ${item.poster ? `<img src="${item.poster}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-800"><i data-lucide="film" class="w-10 h-10 opacity-20"></i></div>`}
+                    <div class="p-6 bg-gray-950/50 flex flex-col md:flex-row gap-8 animate-fadeIn">
+                        <img src="${item.poster}" class="w-32 h-48 rounded-xl shadow-2xl object-cover">
+                        <div class="space-y-3">
+                            <div>
+                                <span class="text-[10px] font-black uppercase text-orange-500 tracking-widest block mb-1">Acteurs</span>
+                                <p class="text-sm text-gray-300 font-bold">${item.actors || 'Niet beschikbaar'}</p>
                             </div>
-                            <div class="flex-1 space-y-4">
-                                <span class="text-orange-500 text-[10px] font-black uppercase tracking-[0.2em]">${item.genres || 'Genre Onbekend'}</span>
-                                <h4 class="text-2xl font-black text-white">${item.fetchedTitle || item.title}</h4>
-                                <p class="text-gray-400 text-sm leading-relaxed font-medium bg-gray-900/80 p-5 rounded-2xl border border-gray-800">${item.plot || "Geen details beschikbaar."}</p>
-                                <div class="flex items-center gap-2">
-                                    <i data-lucide="user" class="text-orange-500 w-4 h-4"></i>
-                                    <span class="text-xs font-bold text-gray-500 italic">Met: ${item.actors || 'Onbekend'}</span>
-                                </div>
+                            <div>
+                                <span class="text-[10px] font-black uppercase text-orange-500 tracking-widest block mb-1">Producer / Director</span>
+                                <p class="text-sm text-gray-300 font-bold">${item.producer || 'Niet beschikbaar'}</p>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-black uppercase text-orange-500 tracking-widest block mb-1">Verhaal</span>
+                                <p class="text-xs text-gray-400 leading-relaxed">${item.plot || 'Geen omschrijving beschikbaar.'}</p>
                             </div>
                         </div>
-                    ` : ''}
-                </div>
-            `).join('');
+                    </div>` : ''}
+                </div>`).join('');
             lucide.createIcons();
         };
 
         window.renderWatchlist = () => {
             const list = document.getElementById('watchlistContent');
-            if(localWatchlist.length === 0) {
-                list.innerHTML = `<div class="p-20 text-center text-gray-600 italic">Je watchlist is momenteel leeg.</div>`;
+            if(!list) return;
+            list.innerHTML = localWatchlist.map(item => `
+                <div class="p-6 flex justify-between items-center group">
+                    <div class="flex gap-6 items-start">
+                        <img src="${item.poster}" class="w-16 h-24 rounded-lg shadow-xl object-cover">
+                        <div class="space-y-1">
+                            <h3 class="font-black text-white text-xl">${item.fetchedTitle || item.title}</h3>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-orange-500/10 text-orange-500 rounded">${item.releaseYear || 'N/A'}</span>
+                                <span class="text-xs text-orange-400 italic font-bold">Reden: ${item.tipReason || 'Handmatig toegevoegd'}</span>
+                            </div>
+                            <p class="text-xs text-gray-500 line-clamp-2 mt-2 leading-relaxed">${item.plot || 'Geen beschrijving'}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                         <button onclick="deleteWatchlist('${item.id}')" class="text-gray-600 hover:text-red-500 p-3 transition-colors bg-gray-950 rounded-xl"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                    </div>
+                </div>`).join('');
+            lucide.createIcons();
+        };
+
+        window.renderTrash = () => {
+            const container = document.getElementById('trashContent');
+            if(!container) return;
+            if(localTrash.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center text-gray-500 font-bold italic uppercase tracking-widest text-xs">De prullenbak is leeg</div>`;
                 return;
             }
-            list.innerHTML = localWatchlist.map(item => `
-                <div class="p-6 flex items-center justify-between group border-b border-gray-800 last:border-0">
-                    <div class="flex items-center gap-6">
-                        <div class="w-16 h-24 bg-gray-800 rounded-xl overflow-hidden flex-shrink-0 border border-gray-700">
-                             ${item.poster ? `<img src="${item.poster}" class="w-full h-full object-cover">` : `<i data-lucide="film" class="m-auto mt-8 opacity-20"></i>`}
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-black text-white group-hover:text-orange-500 transition-colors">${item.title}</h3>
-                            <p class="text-gray-500 text-xs mt-1 font-bold uppercase tracking-widest">${item.mediaType || 'film'}</p>
-                        </div>
+            container.innerHTML = localTrash.map(item => `
+                <div class="p-4 flex justify-between items-center hover:bg-red-500/5 border-b border-gray-800 last:border-0 transition-colors">
+                    <div class="flex items-center gap-3">
+                         <span class="text-white font-medium">${item.fetchedTitle || item.title}</span>
+                         <span class="text-[9px] uppercase font-black text-gray-600 bg-gray-950 px-2 py-0.5 rounded border border-gray-800">${item.type}</span>
                     </div>
                     <div class="flex gap-2">
-                         <button onclick="deleteWatchlist('${item.id}')" class="p-3 bg-gray-800 rounded-xl text-gray-500 hover:text-red-500 transition-all"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                        <button onclick="restoreFromTrash('${item.id}')" title="Herstellen" class="text-green-500 hover:bg-green-500/20 p-2.5 rounded-xl transition-all border border-green-500/20 shadow-lg">
+                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="deletePermanently('${item.id}')" title="Definitief wissen" class="text-red-500 hover:bg-red-500/20 p-2.5 rounded-xl transition-all border border-red-500/20 shadow-lg">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
                     </div>
-                </div>
-            `).join('');
+                </div>`).join('');
             lucide.createIcons();
         };
 
         window.handleSingleAdd = async () => {
-            if (!user) return showToast("Geen verbinding...");
-            const title = document.getElementById('singleTitle').value;
-            const type = document.getElementById('singleType').value;
-            const rating = parseFloat(document.getElementById('singleRating').value);
+            if(!user) return;
+            const titleInput = document.getElementById('singleTitle');
+            const title = titleInput.value;
             if(!title) return;
-
-            try {
-                const docRef = await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'archive'), {
-                    title, type, rating, createdAt: new Date().toISOString(), infoFetched: false
-                });
-                document.getElementById('singleTitle').value = '';
-                showToast("Toegevoegd!");
-                
-                const info = await fetchTMDB(title, type);
-                if(info) await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'archive', docRef.id), info);
-            } catch(e) { showToast("Toevoegen mislukt."); }
+            const info = selectedTMDBData || await fetchTMDB(title, document.getElementById('singleType').value);
+            await addDoc(collection(db, 'archive'), {
+    title, 
+    type: document.getElementById('singleType').value, 
+    rating: parseFloat(document.getElementById('singleRating').value), 
+    createdAt: new Date().toISOString(), 
+    ...info
+});
+            titleInput.value = '';
+            selectedTMDBData = null;
+            showToast("Toegevoegd aan archief!");
         };
 
         window.handleBulkAdd = async () => {
-            if (!user) return;
+            if(!user) return;
             const input = document.getElementById('bulkInput').value;
             const lines = input.split('\n').filter(l => l.trim());
-            document.getElementById('btn-bulk-import').disabled = true;
-
             for(let line of lines) {
                 let rating = 7, title = line.trim();
                 const parts = title.split(' - ');
-                if(parts.length > 1 && !isNaN(parseFloat(parts[parts.length-1]))) {
-                    rating = parseFloat(parts.pop());
-                    title = parts.join(' - ');
-                }
-                await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'archive'), {
-                    title, rating, type: 'film', infoFetched: false, createdAt: new Date().toISOString()
-                });
+                if(parts.length > 1 && !isNaN(parseFloat(parts[parts.length-1]))) { rating = parseFloat(parts.pop()); title = parts.join(' - '); }
+                const info = await fetchTMDB(title, 'film');
+                await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'archive'), { title, rating, type: 'film', createdAt: new Date().toISOString(), ...info });
             }
             document.getElementById('bulkInput').value = '';
-            document.getElementById('bulkSection').classList.add('hidden');
-            document.getElementById('btn-bulk-import').disabled = false;
-            showToast(`${lines.length} titels toegevoegd!`);
+            showToast("Bulk lijst geïmporteerd!");
         };
 
-        async function fetchTMDB(title, type) {
-            try {
-                const sUrl = `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}&language=nl-NL`;
-                const sRes = await fetch(sUrl);
-                const sData = await sRes.json();
-                const best = sData.results?.[0];
-                if(!best) return null;
+        window.moveToTrash = async (id) => {
+            if(!user) return;
+            const item = localArchive.find(i => i.id === id);
+            if(!item) return;
+            const { id: oldId, ...itemData } = item;
+            await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'trash'), { ...itemData, deletedAt: new Date().toISOString() });
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'archive', id));
+            showToast("Verplaatst naar prullenbak");
+        };
 
-                const mType = best.media_type === 'tv' ? 'tv' : 'movie';
-                const dUrl = `https://api.themoviedb.org/3/${mType}/${best.id}?api_key=${TMDB_KEY}&language=nl-NL&append_to_response=credits`;
-                const dRes = await fetch(dUrl);
-                const d = await dRes.json();
-
-                return {
-                    tmdbId: best.id,
-                    mediaType: mType,
-                    plot: d.overview || "Geen beschrijving.",
-                    actors: d.credits?.cast?.slice(0, 5).map(c => c.name).join(', ') || 'Onbekend',
-                    poster: d.poster_path ? `https://image.tmdb.org/t/p/w500${d.poster_path}` : null,
-                    releaseYear: (d.release_date || d.first_air_date || '').split('-')[0],
-                    genres: d.genres?.map(g => g.name).join(', ') || '',
-                    fetchedTitle: d.title || d.name,
-                    tmdbRating: d.vote_average ? d.vote_average.toFixed(1) : null,
-                    infoFetched: true
-                };
-            } catch(e) { return null; }
-        }
-
-        window.fetchMissingInfo = async () => {
+        window.restoreFromTrash = async (id) => {
             if (!user) return;
-            const missing = localArchive.filter(i => !i.infoFetched);
-            if(!missing.length) return showToast("Alles is bijgewerkt!");
-            
-            document.getElementById('btn-fetch').disabled = true;
-            for(let i=0; i<missing.length; i++) {
-                document.getElementById('fetch-text').innerText = `${i+1}/${missing.length}`;
-                const info = await fetchTMDB(missing[i].title, missing[i].type);
-                if(info) await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'archive', missing[i].id), info);
-                await new Promise(r => setTimeout(r, 300));
-            }
-            document.getElementById('btn-fetch').disabled = false;
-            document.getElementById('fetch-text').innerText = "Titel Info";
-            showToast("Info bijgewerkt!");
+            const item = localTrash.find(i => i.id === id);
+            if(!item) return;
+            const { id: oldId, deletedAt, ...data } = item;
+            await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'archive'), data);
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'trash', id));
+            showToast("Item hersteld!");
         };
 
-        window.deleteItem = async (id) => {
-            if(confirm("Verwijderen uit archief?")) {
-                await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'archive', id));
-                showToast("Verwijderd.");
+        window.deletePermanently = async (id) => {
+            if (!user) return;
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'trash', id));
+            showToast("Definitief verwijderd");
+        };
+
+        window.emptyTrash = async () => {
+            if (!user || localTrash.length === 0) return;
+            if(confirm("Wil je de prullenbak definitief legen?")) {
+                const deletePromises = localTrash.map(item => 
+                    deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'trash', item.id))
+                );
+                await Promise.all(deletePromises);
+                showToast("Prullenbak geleegd");
             }
         };
 
         window.deleteWatchlist = async (id) => {
-             await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'watchlist', id));
-             showToast("Verwijderd.");
+            if(!user) return;
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'watchlist', id));
+            showToast("Verwijderd uit watchlist");
+        };
+        
+        window.addToWatchlist = async (encItem, encReason) => {
+            if(!user) return;
+            const itemData = JSON.parse(safeAtob(encItem));
+            const tipReason = safeAtob(encReason);
+            await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'watchlist'), { 
+                ...itemData, 
+                tipReason: tipReason, 
+                addedAt: new Date().toISOString() 
+            });
+            switchTab('watchlist');
+            showToast("Toegevoegd aan watchlist!");
         };
 
-        window.addToWatchlist = async (item) => {
-            await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'watchlist'), {
-                ...item, addedAt: new Date().toISOString()
-            });
-            showToast("Watchlist bijgewerkt!");
-            switchTab('watchlist');
+        window.generateTip = async () => {
+            const container = document.getElementById('tip-container');
+            if(!container) return;
+            const candidates = localArchive.filter(i => i.rating >= 6.5 && i.tmdbId);
+            if(!candidates.length) {
+                container.innerHTML = `<p class="text-gray-500 italic">Voeg eerst films toe met een 6.5 of hoger voor tips.</p>`;
+                return;
+            }
+            const base = candidates[Math.floor(Math.random() * candidates.length)];
+            const res = await fetch(`https://api.themoviedb.org/3/${base.mediaType === 'tv' ? 'tv' : 'movie'}/${base.tmdbId}/recommendations?api_key=${TMDB_KEY}&language=nl-NL`);
+            const data = await res.json();
+            const tipRaw = data.results?.find(r => !localArchive.some(a => String(a.tmdbId) === String(r.id)));
+            if(!tipRaw) {
+                container.innerHTML = `<p class="text-gray-500 italic">Geen nieuwe tips gevonden op basis van "${base.fetchedTitle}".</p>`;
+                return;
+            }
+            const info = await fetchTMDB(tipRaw.title || tipRaw.name, tipRaw.media_type || 'film');
+            const reden = `Omdat je "${base.fetchedTitle || base.title}" een ${base.rating} gaf.`;
+            const encInfo = safeBtoa(JSON.stringify(info));
+            const encReden = safeBtoa(reden);
+
+            container.innerHTML = `
+                <div class="bg-gray-900 p-8 rounded-[3rem] border border-gray-800 flex flex-col md:flex-row gap-8 items-center max-w-2xl mx-auto shadow-2xl animate-fadeIn">
+                    <img src="${info.poster}" class="w-48 rounded-2xl shadow-2xl" onerror="this.src='https://via.placeholder.com/500x750?text=Geen+Poster'">
+                    <div class="text-left space-y-4">
+                        <h3 class="text-3xl font-black text-white">${info.fetchedTitle}</h3>
+                        <p class="text-orange-400 font-bold">${reden}</p>
+                        <p class="text-gray-400 text-sm line-clamp-3">${info.plot || 'Geen omschrijving.'}</p>
+                        <div class="flex gap-4">
+                            <button onclick='addToWatchlist("${encInfo}", "${encReden}")' class="bg-orange-600 px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-orange-500 transition-all">In Watchlist</button>
+                        </div>
+                    </div>
+                </div>`;
+            lucide.createIcons();
         };
 
         window.copyBackup = () => {
             const text = localArchive.map(i => `${i.title} - ${i.rating}`).join('\n');
-            const el = document.createElement('textarea');
-            el.value = text;
-            document.body.appendChild(el);
-            el.select();
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
             document.execCommand('copy');
-            document.body.removeChild(el);
-            showToast("Lijst gekopieerd!");
+            showToast("Backup gekopieerd!");
+            document.body.removeChild(textArea);
         };
 
-        window.handleSearch = () => renderArchive();
         window.toggleExpand = (id) => { expandedId = expandedId === id ? null : id; renderArchive(); };
         window.toggleBulk = () => document.getElementById('bulkSection').classList.toggle('hidden');
-
+        window.handleSearch = () => renderArchive();
         window.filterType = (t) => {
             activeFilter = t;
             document.querySelectorAll('.filter-btn').forEach(b => {
-                b.className = "filter-btn px-8 py-2.5 rounded-2xl font-black transition-all border-2 uppercase text-xs tracking-widest bg-gray-900 border-gray-800 text-gray-500 hover:text-orange-400";
+                b.classList.remove('bg-orange-600', 'border-orange-600', 'text-white');
+                b.classList.add('bg-gray-900', 'border-gray-800', 'text-gray-500');
             });
-            event.target.className = "filter-btn px-8 py-2.5 rounded-2xl font-black transition-all border-2 uppercase text-xs tracking-widest bg-orange-600 border-orange-600 text-white shadow-xl";
+            if(event.target) event.target.classList.add('bg-orange-600', 'border-orange-600', 'text-white');
             renderArchive();
         };
-
-       window.generateTip = async () => {
-
-    const container = document.getElementById('tip-container');
-
-    container.innerHTML = `
-        <div class="flex flex-col items-center gap-4 text-orange-500">
-            <i data-lucide="refresh-cw" class="w-12 h-12 animate-spin"></i>
-            <p class="font-bold">Analyseert jouw smaak...</p>
-        </div>
-    `;
-
-            const prompt = `Gezien deze lijst met favorieten: [${favs}], stel EEN nieuwe film of serie voor die hier perfect bij past. Geef antwoord in JSON: {"titel": "...", "waarom": "..."}`;
-
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } })
-                });
-                const data = await res.json();
-                const ai = JSON.parse(data.candidates[0].content.parts[0].text);
-                const info = await fetchTMDB(ai.titel, 'film');
-
-                if(info) {
-                    container.innerHTML = `
-                        <div class="bg-gray-900 border border-gray-800 rounded-[3rem] p-8 md:p-12 shadow-2xl flex flex-col md:flex-row gap-10 animate-fadeIn w-full">
-                            <div class="w-full md:w-64 aspect-[2/3] rounded-3xl overflow-hidden shadow-2xl border-2 border-orange-500/20 flex-shrink-0">
-                                <img src="${info.poster}" class="w-full h-full object-cover">
-                            </div>
-                            <div class="flex-1 space-y-6">
-                                <div class="space-y-2">
-                                    <span class="text-orange-500 font-black uppercase tracking-[0.3em] text-xs">Geselecteerd voor jou</span>
-                                    <h3 class="text-4xl font-black text-white leading-none">${info.fetchedTitle}</h3>
-                                </div>
-                                <div class="bg-orange-500/5 border border-orange-500/10 p-6 rounded-3xl italic text-orange-200">
-                                    "${ai.waarom}"
-                                </div>
-                                <p class="text-gray-400 line-clamp-3">${info.plot}</p>
-                                <div class="flex gap-4 pt-4">
-                                    <button onclick='addToWatchlist(${JSON.stringify(info).replace(/'/g, "&apos;")})' class="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg active:scale-95">Watchlist</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-            } catch(e) { 
-                container.innerHTML = `<p class="text-red-500">AI even offline. Probeer het opnieuw!</p>`;
-            }
-            lucide.createIcons();
-        };
-
-        window.showToast = (msg) => {
-            const t = document.getElementById('toast');
-            document.getElementById('toast-msg').innerText = msg;
-            t.className = "fixed top-6 right-6 z-50 transition-all duration-300 transform translate-y-0 opacity-100";
-            setTimeout(() => {
-                t.className = "fixed top-6 right-6 z-50 transition-all duration-300 transform translate-y-[-20px] opacity-0";
-            }, 3000);
-        };
-
+        lucide.createIcons();
     </script>
 </body>
 </html>
