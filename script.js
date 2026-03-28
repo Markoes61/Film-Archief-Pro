@@ -1,18 +1,25 @@
-// Functie om de films op het scherm te tonen
-function toonFilms() {
-    const lijstElement = document.getElementById('film-lijst'); // Zorg dat je in HTML een div hebt met id="film-lijst"
-    lijstElement.innerHTML = ''; // Maak de lijst eerst leeg
+// Deze functie pakt de lijst uit movies.js en zet ze op het scherm
+function laadMijnFilms() {
+    const container = document.getElementById('movie-container'); // Check of je HTML een div heeft met id="movie-container"
+    
+    if (!container) {
+        console.error("Kan de plek op de pagina niet vinden om films te tonen!");
+        return;
+    }
 
+    container.innerHTML = ''; // Maak de pagina leeg
+
+    // Gebruik de lijst uit movies.js
     initialMovies.forEach(film => {
-        const filmItem = document.createElement('div');
-        filmItem.className = 'film-kaart';
-        filmItem.innerHTML = `
+        const div = document.createElement('div');
+        div.className = 'movie-card';
+        div.innerHTML = `
             <h3>${film.title}</h3>
             <p>Rating: ${film.rating}</p>
         `;
-        lijstElement.appendChild(filmItem);
+        container.appendChild(div);
     });
 }
 
-// Start de functie als de pagina geladen is
-window.onload = toonFilms;
+// Starten zodra de pagina klaar is
+window.onload = laadMijnFilms;
