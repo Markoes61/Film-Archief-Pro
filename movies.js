@@ -1,0 +1,20 @@
+const initialMovies = [
+    { title: "Spider-Man: No Way Home", rating: 8 },
+    { title: "Going in Style", rating: 7.5 },
+    { title: "The Shining", rating: 7.5 },
+    { title: "Cop Land", rating: 7.5 },
+    { title: "The Beekeeper", rating: 7.5 },
+    { title: "Taken 2", rating: 7.5 },
+    { title: "Widows", rating: 7.5 },
+    { title: "The Call", rating: 7.5 },
+    { title: "Cabin in the Woods", rating: 7.5 },
+    { title: "Aftermath", rating: 7.5 },
+    { title: "Fatal Affair", rating: 7.5 },
+    { title: "The Cloverfield Paradox", rating: 7.5 },
+    { title: "Kiss the Girls", rating: 7.5 },
+    { title: "Final Destination 3", rating: 7.5 },
+    { title: "Final Destination 4", rating: 7.5 },
+    { title: "Final Destination 5", rating: 7.5 },
+    { title: "Rocky 5", rating: 7.5 },
+    { title: "The Investigation of Lucy Letby", rating: 7.5 }
+];
