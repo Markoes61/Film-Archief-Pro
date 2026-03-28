@@ -217,6 +217,7 @@
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'film-archief-pro';
 
+        const SHARED_USER_ID = 'mark-elings-shared';
         let user = null;
         let localArchive = [];
         let localWatchlist = [];
@@ -250,9 +251,9 @@
 
         function setupListeners() {
             if (!user) return;
-            const archivePath = collection(db, 'artifacts', appId, 'users', user.uid, 'archive');
-            const watchlistPath = collection(db, 'artifacts', appId, 'users', user.uid, 'watchlist');
-            const trashPath = collection(db, 'artifacts', appId, 'users', user.uid, 'trash');
+            const archivePath = collection(db, 'artifacts', appId, 'users', SHARED_USER_ID, 'archive');
+            const watchlistPath = collection(db, 'artifacts', appId, 'users', SHARED_USER_ID, 'watchlist');
+            const trashPath = collection(db, 'artifacts', appId, 'users', SHARED_USER_ID, 'trash');
             
             onSnapshot(archivePath, s => {
                 localArchive = s.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -451,7 +452,7 @@
             const title = titleInput.value;
             if(!title) return;
             const info = selectedTMDBData || await fetchTMDB(title, document.getElementById('singleType').value);
-            await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'archive'), {
+            await addDoc(collection(db, 'artifacts', appId, 'users', SHARED_USER_ID, 'archive'), {
                 title, type: document.getElementById('singleType').value, rating: parseFloat(document.getElementById('singleRating').value), createdAt: new Date().toISOString(), ...info
             });
             titleInput.value = '';
@@ -468,7 +469,7 @@
                 const parts = title.split(' - ');
                 if(parts.length > 1 && !isNaN(parseFloat(parts[parts.length-1]))) { rating = parseFloat(parts.pop()); title = parts.join(' - '); }
                 const info = await fetchTMDB(title, 'film');
-                await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'archive'), { title, rating, type: 'film', createdAt: new Date().toISOString(), ...info });
+                await addDoc(collection(db, 'artifacts', appId, 'users', SHARED_USER_ID, 'archive'), { title, rating, type: 'film', createdAt: new Date().toISOString(), ...info });
             }
             document.getElementById('bulkInput').value = '';
             showToast("Bulk lijst geïmporteerd!");
@@ -479,8 +480,8 @@
             const item = localArchive.find(i => i.id === id);
             if(!item) return;
             const { id: oldId, ...itemData } = item;
-            await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'trash'), { ...itemData, deletedAt: new Date().toISOString() });
-            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'archive', id));
+            await addDoc(collection(db, 'artifacts', appId, 'users', SHARED_USER_ID, 'trash'), { ...itemData, deletedAt: new Date().toISOString() });
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', SHARED_USER_ID, 'archive', id));
             showToast("Verplaatst naar prullenbak");
         };
 
@@ -489,14 +490,14 @@
             const item = localTrash.find(i => i.id === id);
             if(!item) return;
             const { id: oldId, deletedAt, ...data } = item;
-            await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'archive'), data);
-            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'trash', id));
+            await addDoc(collection(db, 'artifacts', appId, 'users', SHARED_USER_ID, 'archive'), data);
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', SHARED_USER_ID, 'trash', id));
             showToast("Item hersteld!");
         };
 
         window.deletePermanently = async (id) => {
             if (!user) return;
-            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'trash', id));
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', SHARED_USER_ID, 'trash', id));
             showToast("Definitief verwijderd");
         };
 
@@ -504,7 +505,7 @@
             if (!user || localTrash.length === 0) return;
             if(confirm("Wil je de prullenbak definitief legen?")) {
                 const deletePromises = localTrash.map(item => 
-                    deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'trash', item.id))
+                    deleteDoc(doc(db, 'artifacts', appId, 'users', SHARED_USER_ID, 'trash', item.id))
                 );
                 await Promise.all(deletePromises);
                 showToast("Prullenbak geleegd");
@@ -513,7 +514,7 @@
 
         window.deleteWatchlist = async (id) => {
             if(!user) return;
-            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'watchlist', id));
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', SHARED_USER_ID, 'watchlist', id));
             showToast("Verwijderd uit watchlist");
         };
         
@@ -521,7 +522,7 @@
             if(!user) return;
             const itemData = JSON.parse(safeAtob(encItem));
             const tipReason = safeAtob(encReason);
-            await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'watchlist'), { 
+            await addDoc(collection(db, 'artifacts', appId, 'users', SHARED_USER_ID, 'watchlist'), { 
                 ...itemData, 
                 tipReason: tipReason, 
                 addedAt: new Date().toISOString() 
